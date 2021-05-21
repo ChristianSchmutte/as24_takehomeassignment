@@ -7,8 +7,8 @@ export class AppController {
 
   @Get()
   @Render('index')
-  root() {
-    const result = this.appService.getHello();
-    return { message: result };
+  async root() {
+    const listings = await this.appService.getReport();
+    return { shouldShow: true, listings };
   }
 }

@@ -7,6 +7,12 @@
   <title>Report</title>
 </head>
 <body>
-  {{ message }}
+  {{#if shouldShow}}
+    {{#each listings }}
+    <div class="">
+      {{ this.make }}
+    </div>
+    {{/each}}
+  {{/if}}
 </body>
 </html>
