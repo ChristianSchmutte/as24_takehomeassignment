@@ -98,7 +98,7 @@ describe('AppService', () => {
   it('should throw and an expection', async () => {
     listingsDao.findAll = jest.fn().mockRejectedValue(new Error('Async Error'));
     expect(appService.getReport()).rejects.toThrow(
-      new InternalServerErrorException('Internal server error')
+      new InternalServerErrorException('Internal server error'),
     );
   });
 });

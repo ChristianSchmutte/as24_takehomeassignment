@@ -32,6 +32,7 @@ export class AppService {
         averagePriceTopListings,
       };
     } catch (error) {
+      console.log(error);
       throw new InternalServerErrorException('Internal server error');
     }
   }
@@ -75,7 +76,7 @@ export class AppService {
     Object.keys(makesAmount).forEach((key) => {
       const distribution = ((makesAmount[key] / newListings.length) *
         100) as number;
-      result.push({ make: key, distribution });
+      result.push({ make: key, distribution: Math.round(distribution) });
     });
     result.sort((a, b) => b.distribution - a.distribution);
     return result;
@@ -88,7 +89,7 @@ export class AppService {
     const result: ContactListing[] = newContacts.map(
       ({ listing_id, contact_date }: Contact) => {
         const listing = this.listingsDao.findById(listing_id);
-        const month = new Date(contact_date).getMonth();
+        const month = new Date(contact_date).getMonth() + 1;
         contactListMap[listing_id] = (contactListMap[listing_id] || 0) + 1;
         const amount: number = contactListMap[listing_id];
         return { month, ...listing, amount };
@@ -103,11 +104,16 @@ export class AppService {
     const monthMap: Record<string, ContactListing[]> = {};
     const newContacts = secondLayerCopy<Contact>(contacts);
     const contactListings = this.sortContactsByAmount(newContacts);
+    const idMap = {};
     contactListings.forEach((result) => {
       const { month } = result;
-      if (monthMap[month]) {
-        if (monthMap[month].length < 5) monthMap[month].push(result);
-      } else {
+      if (monthMap[month] && !idMap[result.id]) {
+        idMap[result.id] = true;
+        if (monthMap[month].length < 6) {
+          monthMap[month].push(result);
+        }
+      } else if (!monthMap[month]) {
+        idMap[result.id] = true;
         monthMap[month] = [result];
       }
     });

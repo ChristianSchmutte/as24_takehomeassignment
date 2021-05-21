@@ -4,15 +4,62 @@
   <meta charset="UTF-8">
   <meta http-equiv="X-UA-Compatible" content="IE=edge">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css" integrity="sha384-ggOyR0iXCbMQv3Xipma34MD+dH/1fQ784/j6cY/iJTQUOhcWr7x9JvoRxT2MZw1T" crossorigin="anonymous">
   <title>Report</title>
 </head>
 <body>
-  {{#if shouldShow}}
-    {{#each listings }}
-    <div class="">
-      {{ this.make }}
-    </div>
+  <div class="mt-4 container">
+    <div class="seller-type">
+    <h4>Seller Type | Average Price</h4>
+    <p>private: {{listingAverages.private}}</p>
+    <p>dealer: {{listingAverages.dealer}}</p>
+    <p>other: {{listingAverages.other}}</p>
+  </div>
+
+  <div class="mt-4 make-disttibution">
+    <h4>Make Distribution</h4>
+    {{#each makesDistribution}}
+      <p>
+        {{this.make}} - {{this.distribution}}%
+      </p>
     {{/each}}
-  {{/if}}
+  </div>
+  <div class="mt-4 average-price">
+    <h4>Average Price</h4>
+    <p>{{averagePriceTopListings}}</p>
+  </div>
+  <div class=" mt-4 monthly-ranking">
+  
+    <h4>Top 5 Most Contacted Per Month</h4>
+    {{#each topPerMonth}}
+      <div class=" mt-4 month">
+      {{@key}}.2020
+        <table class="table">
+          <thead>
+            <tr>
+              <th scope="col">ID</th>
+              <th scope="col">Make</th>
+              <th scope="col">Price</th>
+              <th scope="col">Mileage</th>
+              <th scope="col">No. Contacts</th>
+
+            </tr>
+          </thead>
+          <tbody>
+            {{#each this}}
+              <tr>
+                <th scope="row">{{this.id}}</th>
+                <td>{{this.make}}</td>
+                <td>{{this.price}}</td>
+                <td>{{this.mileage}}</td>
+                <td>{{this.amount}}</td>
+              </tr>
+            {{/each}}
+          </tbody>
+        </table>
+      </div>
+    {{/each}}
+  </div>
+  </div>
 </body>
 </html>
