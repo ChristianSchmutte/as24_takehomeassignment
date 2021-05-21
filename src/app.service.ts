@@ -4,6 +4,12 @@ import { ListingsDao } from './dao/listings.dao';
 import { Contact } from './types/contact.type';
 import { Listing } from './types/listing.type';
 import { shallowCopyArrayObjects as secondLayerCopy } from './helpers/shallowcopy';
+import {
+  ContactListing,
+  ListingAverages,
+  MakeDistribution,
+  ReportResoltDto as ReportResultDto,
+} from './dao/dto/report-result.dto';
 
 @Injectable()
 export class AppService {
@@ -11,18 +17,22 @@ export class AppService {
     private readonly listingsDao: ListingsDao,
     private readonly contactsDao: ContactsDao,
   ) {}
-  async getReport(): Promise<Listing[]> {
+  async getReport(): Promise<ReportResultDto> {
     const listings: Listing[] = await this.listingsDao.findAll();
     const contacts: Contact[] = await this.contactsDao.findAll();
     const listingAverages = this.averageSellerListingPrices(listings);
     const makesDistribution = this.calcMakeDistribution(listings);
-    const topPerMonth = this.calcTopMostContacted(contacts);
-    return listings;
+    const topPerMonth = this.topListingsByMonth(contacts);
+    const averagePriceTopListings = this.calcTopContacted(contacts);
+    return {
+      listingAverages,
+      makesDistribution,
+      topPerMonth,
+      averagePriceTopListings,
+    };
   }
 
-  private averageSellerListingPrices(listings: Listing[]) {
-    // shallow, since objects only have scalar types
-    // if objects get nested deep copying would be necessary
+  private averageSellerListingPrices(listings: Listing[]): ListingAverages {
     const newListings: Listing[] = secondLayerCopy<Listing>(listings);
     const dealerListings = newListings
       .filter((listing) => listing.seller_type === 'dealer')
@@ -49,7 +59,7 @@ export class AppService {
     };
   }
 
-  private calcMakeDistribution(listings: Listing[]) {
+  private calcMakeDistribution(listings: Listing[]): MakeDistribution[] {
     const newListings: Listing[] = secondLayerCopy<Listing>(listings);
     const makesAmount = {};
     newListings.forEach(({ make }) => {
@@ -57,27 +67,37 @@ export class AppService {
       else makesAmount[make] = 1;
     });
 
-    const makesDistribution = {};
+    const result: MakeDistribution[] = [];
     Object.keys(makesAmount).forEach((key) => {
-      makesDistribution[key] = (makesAmount[key] / newListings.length) * 100;
+      const distribution = ((makesAmount[key] / newListings.length) *
+        100) as number;
+      result.push({ make: key, distribution });
     });
-    return makesDistribution;
+    result.sort((a, b) => b.distribution - a.distribution);
+    return result;
   }
 
-  private async calcTopMostContacted(contacts: Contact[]) {
+  private sortContactsByAmount(contacts: Contact[]): ContactListing[] {
     const newContacts = secondLayerCopy<Contact>(contacts);
     const contactListMap = {};
     newContacts.sort((a, b) => b.contact_date - a.contact_date);
-    const res = newContacts.map(({ listing_id, contact_date }: Contact) => {
-      const listing = this.listingsDao.findById(listing_id);
-      const month = new Date(contact_date).getMonth();
-      contactListMap[listing_id] = (contactListMap[listing_id] || 0) + 1;
-      const amount = contactListMap[listing_id];
-      return { month, ...listing, amount };
-    });
-    res.sort((a, b) => b.amount - a.amount);
-    const monthMap = {};
-    res.forEach((result) => {
+    const result: ContactListing[] = newContacts.map(
+      ({ listing_id, contact_date }: Contact) => {
+        const listing = this.listingsDao.findById(listing_id);
+        const month = new Date(contact_date).getMonth();
+        contactListMap[listing_id] = (contactListMap[listing_id] || 0) + 1;
+        const amount: number = contactListMap[listing_id];
+        return { month, ...listing, amount };
+      },
+    );
+    return result.sort((a, b) => b.amount - a.amount);
+  }
+
+  private topListingsByMonth(contacts: Contact[]): Record<string, ContactListing[]> {
+    const monthMap: Record<string, ContactListing[]> = {};
+    const newContacts = secondLayerCopy<Contact>(contacts);
+    const contactListings = this.sortContactsByAmount(newContacts);
+    contactListings.forEach((result) => {
       const { month } = result;
       if (monthMap[month]) {
         if (monthMap[month].length < 5) monthMap[month].push(result);
@@ -85,6 +105,18 @@ export class AppService {
         monthMap[month] = [result];
       }
     });
+    console.log(monthMap);
     return monthMap;
+  }
+
+  private calcTopContacted(contacts: Contact[]): number {
+    const newContacts = secondLayerCopy<Contact>(contacts);
+    const sorted = this.sortContactsByAmount(newContacts);
+    const indexFromPercentage = Math.round(newContacts.length * 0.3);
+    const sortedByPercentage = sorted.slice(0, indexFromPercentage);
+    const sum = sortedByPercentage
+      .map((value) => value.price)
+      .reduce((acc, curr) => acc + curr, 0);
+    return Math.round(sum / sortedByPercentage.length);
   }
 }
