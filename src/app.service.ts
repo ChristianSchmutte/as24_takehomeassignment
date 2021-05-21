@@ -1,15 +1,15 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, InternalServerErrorException } from '@nestjs/common';
 import { ContactsDao } from './dao/contacts.dao';
 import { ListingsDao } from './dao/listings.dao';
-import { Contact } from './types/contact.type';
-import { Listing } from './types/listing.type';
 import { shallowCopyArrayObjects as secondLayerCopy } from './helpers/shallowcopy';
 import {
   ContactListing,
   ListingAverages,
   MakeDistribution,
-  ReportResoltDto as ReportResultDto,
-} from './dao/dto/report-result.dto';
+  ReportResultDto,
+  Contact,
+  Listing,
+} from './types';
 
 @Injectable()
 export class AppService {
@@ -18,18 +18,22 @@ export class AppService {
     private readonly contactsDao: ContactsDao,
   ) {}
   async getReport(): Promise<ReportResultDto> {
-    const listings: Listing[] = await this.listingsDao.findAll();
-    const contacts: Contact[] = await this.contactsDao.findAll();
-    const listingAverages = this.averageSellerListingPrices(listings);
-    const makesDistribution = this.calcMakeDistribution(listings);
-    const topPerMonth = this.topListingsByMonth(contacts);
-    const averagePriceTopListings = this.calcTopContacted(contacts);
-    return {
-      listingAverages,
-      makesDistribution,
-      topPerMonth,
-      averagePriceTopListings,
-    };
+    try {
+      const listings: Listing[] = await this.listingsDao.findAll();
+      const contacts: Contact[] = await this.contactsDao.findAll();
+      const listingAverages = this.averageSellerListingPrices(listings);
+      const makesDistribution = this.calcMakeDistribution(listings);
+      const topPerMonth = this.topListingsByMonth(contacts);
+      const averagePriceTopListings = this.calcTopContacted(contacts);
+      return {
+        listingAverages,
+        makesDistribution,
+        topPerMonth,
+        averagePriceTopListings,
+      };
+    } catch (error) {
+      throw new InternalServerErrorException('Internal server error');
+    }
   }
 
   private averageSellerListingPrices(listings: Listing[]): ListingAverages {
@@ -93,7 +97,9 @@ export class AppService {
     return result.sort((a, b) => b.amount - a.amount);
   }
 
-  private topListingsByMonth(contacts: Contact[]): Record<string, ContactListing[]> {
+  private topListingsByMonth(
+    contacts: Contact[],
+  ): Record<string, ContactListing[]> {
     const monthMap: Record<string, ContactListing[]> = {};
     const newContacts = secondLayerCopy<Contact>(contacts);
     const contactListings = this.sortContactsByAmount(newContacts);
@@ -105,18 +111,17 @@ export class AppService {
         monthMap[month] = [result];
       }
     });
-    console.log(monthMap);
     return monthMap;
   }
 
   private calcTopContacted(contacts: Contact[]): number {
     const newContacts = secondLayerCopy<Contact>(contacts);
     const sorted = this.sortContactsByAmount(newContacts);
-    const indexFromPercentage = Math.round(newContacts.length * 0.3);
+    const indexFromPercentage = Math.round(newContacts.length * 0.3) + 1;
     const sortedByPercentage = sorted.slice(0, indexFromPercentage);
     const sum = sortedByPercentage
       .map((value) => value.price)
-      .reduce((acc, curr) => acc + curr, 0);
+      .reduce((acc, curr) => acc + curr);
     return Math.round(sum / sortedByPercentage.length);
   }
 }

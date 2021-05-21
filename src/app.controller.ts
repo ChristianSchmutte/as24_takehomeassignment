@@ -8,7 +8,8 @@ export class AppController {
   @Get()
   @Render('index')
   async root() {
-    const listings = await this.appService.getReport();
-    return { shouldShow: true, listings };
+    const report = await this.appService.getReport();
+    console.log(report);
+    return { shouldShow: true, report };
   }
 }

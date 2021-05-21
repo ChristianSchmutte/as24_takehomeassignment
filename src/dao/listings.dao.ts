@@ -2,7 +2,7 @@ import { Injectable } from '@nestjs/common';
 import * as parser from 'csv-parser';
 import * as fs from 'fs';
 import { join } from 'path';
-import { Listing } from 'src/types/listing.type';
+import { Listing } from '../types';
 
 @Injectable()
 export class ListingsDao {
