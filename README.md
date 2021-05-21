@@ -22,6 +22,8 @@ $ npm run start
 # watch mode (nodemon)
 $ npm run start:dev
 
+- The app will now serve on http://localhost:3000 or the one specified by the .env
+- an API endpoint is also available at http://localhost:3000/api
 
 ## Test
 
